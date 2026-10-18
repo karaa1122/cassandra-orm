@@ -37,10 +37,22 @@ CASSANDRA_IMAGE=cassandra:4.1 pnpm test:integration          # other versions
 
 ## Releasing
 
-Publish with **pnpm** (not npm) so `workspace:` ranges are rewritten to real versions:
+1. Bump `version` in `packages/core/package.json` and `packages/nestjs/package.json`, then commit and push. Wait for CI to go green.
+2. Pack with **pnpm**, which builds each package (`prepack`) and rewrites `workspace:` ranges to real versions:
 
-```bash
-pnpm -r --filter "./packages/*" publish --access public
-```
+   ```bash
+   mkdir -p /tmp/release
+   (cd packages/core && pnpm pack --pack-destination /tmp/release)
+   (cd packages/nestjs && pnpm pack --pack-destination /tmp/release)
+   ```
 
-`prepack` builds each package first. The `@cassandra-orm` npm scope must belong to the publishing account.
+3. Publish the tarballs from an **interactive terminal**, `core` first. npm requires 2FA for publishing; with a security key or passkey it prints a link ("Press ENTER to open in the browser") to approve in the browser:
+
+   ```bash
+   npm publish /tmp/release/cassandra-orm-core-<version>.tgz --access public
+   npm publish /tmp/release/cassandra-orm-nestjs-<version>.tgz --access public
+   ```
+
+   With an authenticator app, `pnpm -r --filter "./packages/*" publish --access public --otp=<code>` does steps 2 and 3 in one go. Never run plain `npm publish` inside a package folder: it would ship the unrewritten `workspace:^` range.
+
+Publishing requires membership in the [`cassandra-orm`](https://www.npmjs.com/org/cassandra-orm) npm org.

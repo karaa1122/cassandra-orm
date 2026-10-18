@@ -3,11 +3,16 @@
 A TypeScript-first object mapper for Apache Cassandra, built on the official [`cassandra-driver`](https://github.com/apache/cassandra-nodejs-driver). The core works with any framework; NestJS integration ships as a separate package.
 
 [![CI](https://github.com/karaa1122/cassandra-orm/actions/workflows/ci.yml/badge.svg)](https://github.com/karaa1122/cassandra-orm/actions/workflows/ci.yml)
+[![npm core](https://img.shields.io/npm/v/@cassandra-orm/core?label=%40cassandra-orm%2Fcore)](https://www.npmjs.com/package/@cassandra-orm/core)
+[![npm nestjs](https://img.shields.io/npm/v/@cassandra-orm/nestjs?label=%40cassandra-orm%2Fnestjs)](https://www.npmjs.com/package/@cassandra-orm/nestjs)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
-| Package                                    | Use it for                                                     |
-| ------------------------------------------ | -------------------------------------------------------------- |
-| [`@cassandra-orm/core`](packages/core)     | Entities, repositories, queries. Express, Fastify, plain Node… |
-| [`@cassandra-orm/nestjs`](packages/nestjs) | `CassandraModule`, `@InjectRepository()` for NestJS 11 and 12  |
+| Package                                                                        | Use it for                                                     |
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------- |
+| [`@cassandra-orm/core`](https://www.npmjs.com/package/@cassandra-orm/core)     | Entities, repositories, queries. Express, Fastify, plain Node… |
+| [`@cassandra-orm/nestjs`](https://www.npmjs.com/package/@cassandra-orm/nestjs) | `CassandraModule`, `@InjectRepository()` for NestJS 11 and 12  |
+
+Source for each lives in [`packages/core`](packages/core) and [`packages/nestjs`](packages/nestjs).
 
 ## Why another Cassandra ORM?
 
