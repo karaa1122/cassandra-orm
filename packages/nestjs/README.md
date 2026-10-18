@@ -2,6 +2,8 @@
 
 NestJS integration for [`@cassandra-orm/core`](https://www.npmjs.com/package/@cassandra-orm/core).
 
+> **Early release (0.x):** well tested, but not yet used in production, and the API may change in minor versions. Pin exact versions. See the [project status](https://github.com/karaa1122/cassandra-orm#readme).
+
 ```bash
 npm install @cassandra-orm/nestjs @cassandra-orm/core cassandra-driver
 ```

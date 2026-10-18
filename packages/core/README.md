@@ -2,6 +2,8 @@
 
 TypeScript-first object mapper for Apache Cassandra, built on [`cassandra-driver`](https://www.npmjs.com/package/cassandra-driver). It works with any framework. NestJS users should also install [`@cassandra-orm/nestjs`](https://www.npmjs.com/package/@cassandra-orm/nestjs).
 
+> **Early release (0.x):** well tested, but not yet used in production, and the API may change in minor versions. Pin exact versions. See the [project status](https://github.com/karaa1122/cassandra-orm#readme).
+
 ```bash
 npm install @cassandra-orm/core cassandra-driver
 ```

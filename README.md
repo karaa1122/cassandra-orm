@@ -7,6 +7,9 @@ A TypeScript-first object mapper for Apache Cassandra, built on the official [`c
 [![npm nestjs](https://img.shields.io/npm/v/@cassandra-orm/nestjs?label=%40cassandra-orm%2Fnestjs)](https://www.npmjs.com/package/@cassandra-orm/nestjs)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
+> [!WARNING]
+> **Status: early release (0.x).** The core is well tested against real Cassandra 4.1 and 5.0, but it has no production users yet, and the API may change in any minor version. Pin exact versions. Known gaps: no batches or migrations yet, and `synchronize` creates missing tables but never alters existing ones, so new entity columns need manual `ALTER TABLE`. See the [roadmap](#roadmap). Bug reports and feedback are very welcome in [issues](https://github.com/karaa1122/cassandra-orm/issues).
+
 | Package                                                                        | Use it for                                                     |
 | ------------------------------------------------------------------------------ | -------------------------------------------------------------- |
 | [`@cassandra-orm/core`](https://www.npmjs.com/package/@cassandra-orm/core)     | Entities, repositories, queries. Express, Fastify, plain Node… |
