@@ -1,0 +1,51 @@
+{
+  "name": "@cassandra-orm/core",
+  "version": "0.1.0",
+  "description": "TypeScript-first object mapper for Apache Cassandra, built on cassandra-driver",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/karaa1122/cassandra-orm.git",
+    "directory": "packages/core"
+  },
+  "keywords": [
+    "cassandra",
+    "orm",
+    "odm",
+    "mapper",
+    "cql",
+    "typescript"
+  ],
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "prepack": "pnpm run build"
+  },
+  "peerDependencies": {
+    "cassandra-driver": "^4.7.0"
+  },
+  "devDependencies": {
+    "cassandra-driver": "^4.10.0"
+  }
+}

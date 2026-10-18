@@ -1,99 +1,234 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# cassandra-orm
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A TypeScript-first object mapper for Apache Cassandra, built on the official [`cassandra-driver`](https://github.com/apache/cassandra-nodejs-driver). The core works with any framework; NestJS integration ships as a separate package.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+[![CI](https://github.com/karaa1122/cassandra-orm/actions/workflows/ci.yml/badge.svg)](https://github.com/karaa1122/cassandra-orm/actions/workflows/ci.yml)
 
-## Description
+| Package                                    | Use it for                                                     |
+| ------------------------------------------ | -------------------------------------------------------------- |
+| [`@cassandra-orm/core`](packages/core)     | Entities, repositories, queries. Express, Fastify, plain Node… |
+| [`@cassandra-orm/nestjs`](packages/nestjs) | `CassandraModule`, `@InjectRepository()` for NestJS 11 and 12  |
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Why another Cassandra ORM?
 
-## Project setup
+Cassandra is not a relational database, and pretending it is leads to slow, broken queries. This library is designed around how Cassandra actually works:
+
+- **Primary-key aware queries.** Every query is checked against the table's partition and clustering keys _before_ it reaches the cluster. Queries that would need `ALLOW FILTERING` (a scan) fail with an explanation, unless you opt in.
+- **No tombstones by accident.** Missing values are bound as `unset`, not `null`, so a partial insert never wipes or tombstones existing columns.
+- **Injection-proof by construction.** Values are always bound parameters in prepared statements; identifiers come only from your entity metadata and are quoted. See [SECURITY.md](SECURITY.md).
+- **Relations without joins.** `@BelongsTo` / `@HasMany` load related rows with key lookups (like Django's `prefetch_related`), validated like any other query.
+- **The Cassandra features you actually use:** cursor pagination, lightweight transactions, TTL, write timestamps, counters, static columns, consistency levels.
+
+## Install
+
+Requires Node.js 22+ and Cassandra 4.1 or 5.0.
 
 ```bash
-$ npm install
+npm install @cassandra-orm/core cassandra-driver
+# NestJS apps also:
+npm install @cassandra-orm/nestjs
 ```
 
-## Compile and run the project
+Enable legacy decorators in `tsconfig.json` (NestJS projects already have this):
 
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+```json
+{ "compilerOptions": { "experimentalDecorators": true } }
 ```
 
-## Run tests
+## Define entities
 
-```bash
-# unit tests
-$ npm run test
+```ts
+import {
+  ClusteringKey,
+  Column,
+  PartitionKey,
+  Table,
+} from '@cassandra-orm/core';
 
-# e2e tests
-$ npm run test:e2e
+@Table('messages_by_room')
+export class Message {
+  @PartitionKey({ type: 'uuid' })
+  roomId!: string;
 
-# test coverage
-$ npm run test:cov
+  @ClusteringKey({ type: 'timeuuid', order: 'DESC' })
+  messageId!: string;
+
+  @Column({ type: 'text' })
+  body!: string;
+
+  @Column({ type: 'set<text>' })
+  tags?: string[] | null;
+}
 ```
 
-## Deployment
+CQL types are always explicit, because TypeScript's `string` cannot tell `text` from `uuid` or `timeuuid`. Column names default to the property name in snake_case (`roomId` → `room_id`); override with `name`.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## Use it anywhere (plain Node, Express, Fastify…)
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+```ts
+import { DataSource } from '@cassandra-orm/core';
 
-```bash
-$ npm install -g mau
-$ mau deploy
+const dataSource = new DataSource({
+  contactPoints: ['127.0.0.1:9042'],
+  localDataCenter: 'datacenter1',
+  keyspace: 'chat',
+  entities: [Message],
+  synchronize: true, // CREATE TABLE IF NOT EXISTS. Development only.
+});
+await dataSource.connect();
+
+const messages = dataSource.getRepository(Message);
+await messages.insert({ roomId, messageId, body: 'hi' }, { ttl: 3600 });
+const latest = await messages.find({ roomId }, { limit: 50 });
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Already have a `Client`? Pass `{ client, entities }` instead; the DataSource will not shut it down.
 
-## Resources
+## Use it in NestJS
 
-Check out a few resources that may come in handy when working with NestJS:
+```ts
+import { CassandraModule, InjectRepository } from '@cassandra-orm/nestjs';
+import { Repository } from '@cassandra-orm/core';
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+@Module({
+  imports: [
+    CassandraModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        contactPoints: config.get('CASSANDRA_CONTACT_POINTS').split(','),
+        localDataCenter: config.get('CASSANDRA_DC'),
+        keyspace: 'chat',
+        autoLoadEntities: true,
+      }),
+    }),
+    CassandraModule.forFeature([Message]),
+  ],
+  providers: [ChatService],
+})
+export class ChatModule {}
 
-## Support
+@Injectable()
+export class ChatService {
+  constructor(
+    @InjectRepository(Message) private readonly messages: Repository<Message>,
+  ) {}
+}
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+The connection closes on application shutdown. Multiple clusters: give `forRoot` a `name` and pass it to `forFeature([...], name)` and `@InjectRepository(Entity, name)`. A runnable app lives in [`examples/nestjs-app`](examples/nestjs-app).
 
-## Stay in touch
+## Querying
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```ts
+// Equality by default; operators for the rest.
+await messages.find({ roomId, messageId: { $gt: since } });
+await messages.find({ roomId: { $in: [a, b] } });
+
+// Sort by clustering columns (their declared order or its exact reverse).
+await messages.find({ roomId }, { orderBy: { messageId: 'ASC' }, limit: 10 });
+
+// Stream big partitions without loading them into memory.
+for await (const message of messages.iterate({ roomId })) {
+  /* … */
+}
+
+// Cursor pagination for APIs (Cassandra has no OFFSET).
+const page = await messages.findPage({ roomId }, { pageSize: 20, pageState });
+// -> { items, pageState: string | null }
+```
+
+Queries that Cassandra could only answer by scanning are rejected:
+
+```ts
+await messages.find({ body: 'hi' });
+// InvalidQueryError: Query on Message would require ALLOW FILTERING:
+// "body" is not part of the primary key. Query by the primary key, or pass
+// allowFiltering: true if scanning is acceptable.
+```
+
+`undefined` in a `where` object is an error, never "match anything". That way a missing request parameter can't turn `delete({ roomId })` into something broader.
+
+## Writing
+
+```ts
+await messages.insert(message); // upsert, like all CQL INSERTs
+await messages.insert(message, { ifNotExists: true }); // -> { applied: boolean }
+await messages.update({ roomId, messageId }, { body: 'edited' });
+await messages.update(key, { body: 'v2' }, { if: { body: 'v1' } }); // LWT
+await messages.update(key, { tags: null }); // null deletes the cell
+await messages.delete({ roomId }); // whole partition
+await messages.delete({ roomId, messageId: { $lt: cutoff } }); // clustering range
+await pageViews.increment({ page: '/' }, { views: 1 }); // counter tables
+```
+
+All write methods accept `ttl` (insert/update), `timestamp` (µs), `consistency`, `serialConsistency`, `executionProfile` and `isIdempotent`.
+
+## Relations (no joins)
+
+Cassandra cannot join tables. Django's `select_related` relies on SQL JOINs, so it has no equivalent here. Django's `prefetch_related` does: a second query per distinct key, stitched together in memory. That is what relations do:
+
+```ts
+@Table('users')
+class User {
+  @PartitionKey({ type: 'uuid' }) id!: string;
+  @Column({ type: 'text' }) name!: string;
+
+  @HasMany(() => Post, { on: { id: 'authorId' } })
+  posts?: Post[];
+}
+
+@Table('posts_by_author') // partitioned by author: "posts of a user" is one partition
+class Post {
+  @PartitionKey({ type: 'uuid' }) authorId!: string;
+  @ClusteringKey({ type: 'timeuuid', order: 'DESC' }) postId!: string;
+  @Column({ type: 'text' }) title!: string;
+
+  @BelongsTo(() => User, { on: { authorId: 'id' } })
+  author?: User | null;
+}
+
+const user = await users.findOne(
+  { id },
+  { include: { posts: { limit: 5, include: ['author'] } } },
+);
+```
+
+- One query per _distinct_ key (32 in flight at most), never one per row.
+- The target side of `on` must be a queryable key, at least the full partition key. A relation that would need a scan throws, which tells you to model a table for that access pattern.
+- Relations are read-only and only loaded when you `include` them; `insert()` ignores them.
+
+## Type mapping
+
+| CQL                                             | TypeScript                                                  |
+| ----------------------------------------------- | ----------------------------------------------------------- |
+| `uuid`, `timeuuid`                              | `string` (also inside collections)                          |
+| `text`, `varchar`, `ascii`                      | `string`                                                    |
+| `int`, `smallint`, `tinyint`, `float`, `double` | `number`                                                    |
+| `bigint`, `counter`                             | driver `Long` (or `bigint` with `encoding.useBigIntAsLong`) |
+| `timestamp`                                     | `Date`                                                      |
+| `boolean`                                       | `boolean`                                                   |
+| `list<T>`, `set<T>`                             | `T[]` (a `Set` with `encoding.set: Set`)                    |
+| `map<K, V>`                                     | plain object (a `Map` with `encoding.map: Map`)             |
+| everything else                                 | the driver's type (`BigDecimal`, `LocalDate`, …)            |
+
+## Schema
+
+`synchronize: true` runs `CREATE TABLE IF NOT EXISTS` for every entity on connect. It never alters or drops anything, and is meant for development and tests. `buildCreateTable(getEntityMetadata(Entity))` returns the CQL if you want to put it in your own migrations.
+
+## Roadmap
+
+- Migrations CLI
+- User-defined types (UDTs) and tuples as first-class column types
+- Secondary indexes / SAI declarations (lifting the filtering check for indexed columns)
+- Batches (logged and unlogged) and multi-table denormalized writes
+- Lifecycle hooks, a `@nestjs/terminus` health indicator
+- ScyllaDB in the CI matrix
+- A decorator-free `defineEntity()` API
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Security reports: [SECURITY.md](SECURITY.md).
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+[Apache-2.0](LICENSE)
